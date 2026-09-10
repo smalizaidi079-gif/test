@@ -41,7 +41,7 @@ function SizeGrid({
   );
 }
 
-export function Step3PropertyDetails({ wizard }: { wizard: QuoteWizard }) {
+export function Step4PropertyDetails({ wizard }: { wizard: QuoteWizard }) {
   const config = getQuestionsForService(wizard.state.serviceId);
   const details = wizard.state.propertyDetails;
 

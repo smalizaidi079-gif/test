@@ -4,8 +4,8 @@ import { ProgressBar } from "./ProgressBar";
 import { TrustBadges } from "@/components/ui/TrustBadges";
 import { Step1Service } from "./steps/Step1Service";
 import { Step2Address } from "./steps/Step2Address";
-import { Step3PropertyDetails } from "./steps/Step3PropertyDetails";
-import { Step4Frequency } from "./steps/Step4Frequency";
+import { Step3Frequency } from "./steps/Step3Frequency";
+import { Step4PropertyDetails } from "./steps/Step4PropertyDetails";
 import { Step5Quote } from "./steps/Step5Quote";
 import { Step6CustomerInfo } from "./steps/Step6CustomerInfo";
 import { Step7Confirmation } from "./steps/Step7Confirmation";
@@ -38,8 +38,8 @@ export function QuoteWidget() {
             <AnimatePresence mode="wait">
               {wizard.step === 1 && <Step1Service key="1" wizard={wizard} />}
               {wizard.step === 2 && <Step2Address key="2" wizard={wizard} />}
-              {wizard.step === 3 && <Step3PropertyDetails key="3" wizard={wizard} />}
-              {wizard.step === 4 && <Step4Frequency key="4" wizard={wizard} />}
+              {wizard.step === 3 && <Step3Frequency key="3" wizard={wizard} />}
+              {wizard.step === 4 && <Step4PropertyDetails key="4" wizard={wizard} />}
               {wizard.step === 5 && <Step5Quote key="5" wizard={wizard} />}
               {wizard.step === 6 && <Step6CustomerInfo key="6" wizard={wizard} />}
               {wizard.step === 7 && <Step7Confirmation key="7" wizard={wizard} />}

@@ -1,20 +1,27 @@
 # Instant Quote & Booking Widget (Prototype)
 
 A LawnStarter-inspired instant quote and booking wizard, built as a
-standalone, embeddable React widget for a WordPress site. This is a
-**client-demo prototype** — no paid APIs, no Google Maps/Places, no
-payment processor. Everything (address suggestions, pricing) is powered
-by mock logic that's structured so the real integrations can be dropped
-in later with minimal changes.
+standalone, embeddable React widget for a WordPress site. It runs as a
+**zero-cost demo out of the box** (mock address suggestions, no API key
+needed), and can be switched to **real Google Places + a satellite map**
+by setting one environment variable — no code changes required either
+way. There is still no payment processor; that was out of scope.
 
 ## What's inside
 
-- A 7-step instant quote wizard: Service → Address → Property Details →
-  Frequency → Instant Quote → Customer Info → Confirmation.
+- A 7-step instant quote wizard: Service → Address (+ satellite view) →
+  Frequency → Property Details → Instant Quote → Customer Info →
+  Confirmation.
 - A demo pricing engine with a live, animated price breakdown.
-- A mock address-autocomplete system (type `123 Ma` → get `123 Main
-  Street, New York`, `123 Maple Avenue, New York`, etc.) built behind an
-  interface so it's a one-file swap to Google Places later.
+- An address-autocomplete system with two interchangeable backends behind
+  one interface:
+  - **Mock** (default, no setup): type `123 Ma` → get `123 Main Street,
+    New York`, `123 Maple Avenue, New York`, etc. — pure local logic, no
+    network calls.
+  - **Google Places** (opt-in): real autocomplete + geocoding, plus an
+    interactive satellite map of the confirmed property. Activated by
+    setting `VITE_GOOGLE_MAPS_API_KEY` — see "Google Maps integration"
+    below.
 - Two build outputs from one codebase:
   - **`dist/`** — a standalone page (for hosting + `<iframe>` embedding).
   - **`dist-embed/`** — a single JS file that self-mounts into a Shadow
@@ -27,29 +34,32 @@ in later with minimal changes.
 ```
 src/
   components/
-    address-autocomplete/   # Mock address system — swappable for Google Places
+    address-autocomplete/   # Address system — mock by default, Google Places opt-in
       AddressProvider.ts           interface every provider implements
-      MockAddressProvider.ts       the demo implementation (active)
-      GooglePlacesProvider.example.ts   reference stub for later
+      MockAddressProvider.ts       zero-cost demo implementation (default)
+      GooglePlacesProvider.ts      real Places autocomplete + geocoding
       AddressAutocomplete.tsx      UI component (provider-agnostic)
-      index.ts                     <- the ONE file to edit to swap providers
+      SatelliteMap.tsx             interactive satellite map (Google Places mode only)
+      index.ts                     <- the ONE file that picks the active provider
     pricing-engine/          # Pure business logic, no React
       pricingConfig.ts             all $ amounts / discount %s live here
       pricingEngine.ts              calculateQuote(), formatCurrency()
     booking-flow/            # The wizard UI
       QuoteWidget.tsx               orchestrator / shell
       ProgressBar.tsx, StepShell.tsx, NavigationButtons.tsx
-      steps/Step1..Step7*.tsx
+      steps/Step1..Step7*.tsx       (order: Service, Address, Frequency, PropertyDetails, Quote, CustomerInfo, Confirmation)
     ui/                      # Shared UI atoms (Button, SelectableCard, icons, ...)
   data/
     servicesConfig.ts        # Step 1 service list
-    propertyQuestionsConfig.ts  # Which questions/add-ons show per service (Step 3)
+    propertyQuestionsConfig.ts  # Which questions/add-ons show per service (Step 4)
   hooks/useQuoteWizard.ts    # All wizard state + validation, separate from UI
+  lib/googleMapsLoader.ts    # Loads the Google Maps script once, on demand, with a timeout
   types/booking.ts           # Shared domain types
   App.tsx, main.tsx          # Dev/standalone entry (plain DOM mount)
   embed.tsx                  # WordPress entry (Shadow DOM mount + window.InstantQuoteWidget.init)
 wordpress-plugin/instant-quote-widget/   # Ready-to-zip WP plugin
 scripts/copy-to-wp-plugin.mjs           # Copies the built embed JS into the plugin
+.env.example                # Copy to .env to set VITE_GOOGLE_MAPS_API_KEY
 ```
 
 Business logic (pricing, address resolution, wizard state) is fully
@@ -142,31 +152,56 @@ auto-resize instead of guessing a fixed height:
 This was tested end-to-end: the iframe starts at a default height and
 snaps to the widget's real content height once it loads.
 
-## Replacing the mock address system with Google Places later
+## Google Maps integration
 
-The whole point of `src/components/address-autocomplete/` is that this
-is a **one-file swap**:
+Real Google Places autocomplete/geocoding and a live satellite map are
+already built and wired in behind the same `AddressProvider` interface
+the mock system uses — turning it on is a **config change, not a code
+change**.
 
-1. Rename `GooglePlacesProvider.example.ts` → `GooglePlacesProvider.ts`
-   and fill in the two methods (`getSuggestions`, `resolveSuggestion`) —
-   the stub already shows the exact shape expected, matching the
-   `AddressProvider` interface used everywhere else.
-2. Because a Places API key should never ship directly into client JS,
-   route requests through a tiny WordPress REST endpoint or PHP AJAX
-   handler that holds the key server-side and proxies
-   Autocomplete/Place Details calls. The stub's `proxyEndpoint` param is
-   built for exactly that.
-3. In `src/components/address-autocomplete/index.ts`, change:
-   ```ts
-   export const addressProvider: AddressProvider = new MockAddressProvider();
+### Enabling it
+
+1. In Google Cloud Console: create/select a project, enable **billing**,
+   and enable these three APIs: **Maps JavaScript API**, **Places API**,
+   **Geocoding API**.
+2. Create an API key, then **restrict it** (Credentials → your key →
+   Application restrictions → HTTP referrers) to the domain(s) you'll
+   deploy to. This is a browser key, not a secret — it ships inside the
+   built JS bundle, so the referrer restriction is what actually protects
+   it from being used elsewhere.
+3. Copy `.env.example` to `.env` and paste in the key:
    ```
-   to:
-   ```ts
-   export const addressProvider: AddressProvider = new GooglePlacesProvider("/wp-json/iqw/v1/places");
+   VITE_GOOGLE_MAPS_API_KEY=your-key-here
    ```
-4. Rebuild (`npm run build:all`). **No other file changes anywhere** —
-   `AddressAutocomplete.tsx` and the rest of the wizard only ever talk to
-   the `AddressProvider` interface, not the mock implementation directly.
+4. Rebuild (`npm run dev` or `npm run build:all`).
+
+That's it — `src/components/address-autocomplete/index.ts` checks for
+that env var and automatically switches from `MockAddressProvider` to
+`GooglePlacesProvider` at build time. Leave `.env` empty/absent and the
+zero-cost mock stays active — nothing else changes or breaks.
+
+### What changes once it's on
+
+- **Address step**: real Places autocomplete suggestions and geocoding
+  (instead of the fake street-name list), plus an interactive satellite
+  map (Google's "hybrid" view — imagery + labels) centered on the
+  resolved property with a pin, and a small details row (city, state,
+  ZIP, coordinates).
+- If the Maps script fails to load or times out (bad key, network
+  issue), the widget degrades gracefully — suggestions just come back
+  empty and the map shows an inline error — it never hangs or crashes.
+
+### Notes for whoever wires up the real key later
+
+- `.env` / `.env.*` are gitignored (only `.env.example` is committed) —
+  never commit a real key.
+- For the **WordPress plugin build**, the key gets baked into
+  `instant-quote-widget.js` at build time (`npm run build:wp`), same
+  referrer-restriction rule applies — restrict it to the WP site's
+  domain.
+- Want to add a different provider later (e.g. Mapbox)? Implement the
+  same `AddressProvider` interface (`src/components/address-autocomplete/AddressProvider.ts`)
+  and point `index.ts` at it — nothing else in the wizard needs to change.
 
 ## Pricing engine — tuning the demo numbers
 
@@ -195,14 +230,16 @@ host:
 | Piece | Status |
 |---|---|
 | Wizard UI, animations, pricing math, validation | Production-quality — reusable as-is |
-| Address autocomplete | Mocked, swappable via one interface (see above) |
+| Address autocomplete + satellite map | Real (Google Places), opt-in via `VITE_GOOGLE_MAPS_API_KEY`; falls back to the zero-cost mock when unset |
 | Customer submission storage | Saved to `localStorage` only — swap `wizard.submit()` in `src/hooks/useQuoteWizard.ts` for a real API call (e.g. a WP REST endpoint) when going live |
 | Payments | Not implemented (not requested for this prototype) |
 
 ## Testing notes
 
-The full 7-step flow, the mock address suggestions, the WordPress
-Shadow-DOM embed (rendered inside a deliberately theme-hostile host page),
-and the iframe auto-resize path were all exercised in a headless browser
-during development. No console errors were observed in any of these
-paths.
+The full 7-step flow (in both mock and Google-configured modes), the
+mock address suggestions, the WordPress Shadow-DOM embed (rendered
+inside a deliberately theme-hostile host page), the iframe auto-resize
+path, and the Google Maps failure path (invalid/blocked key — verifying
+the loader's timeout resolves the UI instead of hanging) were all
+exercised in a headless browser during development. No console errors
+were observed in any of these paths.

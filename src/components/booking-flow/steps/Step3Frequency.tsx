@@ -4,24 +4,30 @@ import { SelectableCard } from "@/components/ui/SelectableCard";
 import { Calendar } from "@/components/ui/icons";
 import type { Frequency } from "@/types/booking";
 import type { QuoteWizard } from "@/hooks/useQuoteWizard";
-import { calculateQuote, formatCurrency } from "@/components/pricing-engine/pricingEngine";
-import { FREQUENCY_LABELS } from "@/components/pricing-engine/pricingConfig";
+import { FREQUENCY_DISCOUNTS, FREQUENCY_LABELS } from "@/components/pricing-engine/pricingConfig";
 
 const FREQUENCIES: Frequency[] = ["one-time", "weekly", "biweekly", "monthly"];
 
-export function Step4Frequency({ wizard }: { wizard: QuoteWizard }) {
+// Exact $ pricing isn't known yet at this point in the flow — property
+// details (which drive size/condition/add-on adjustments) are collected
+// on the next step — so this only communicates the discount shape, not a
+// dollar preview. The full animated breakdown shows up on the Quote step.
+const FREQUENCY_DESCRIPTIONS: Record<Frequency, string> = {
+  "one-time": "A single scheduled visit",
+  weekly: "Consistent weekly upkeep",
+  biweekly: "Maintained every two weeks",
+  monthly: "Light monthly touch-ups",
+};
+
+export function Step3Frequency({ wizard }: { wizard: QuoteWizard }) {
   return (
     <StepShell
       title="How often do you need this service?"
-      subtitle="Recurring plans include an automatic discount."
+      subtitle="Recurring plans include an automatic discount — exact pricing is calculated after a couple more quick questions."
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {FREQUENCIES.map((freq) => {
-          const preview = calculateQuote(
-            wizard.state.serviceId,
-            wizard.state.propertyDetails,
-            freq,
-          );
+          const discountPercent = FREQUENCY_DISCOUNTS[freq];
           return (
             <SelectableCard
               key={freq}
@@ -29,8 +35,8 @@ export function Step4Frequency({ wizard }: { wizard: QuoteWizard }) {
               onClick={() => wizard.setFrequency(freq)}
               icon={<Calendar className="h-5 w-5" />}
               title={FREQUENCY_LABELS[freq]}
-              description={`${formatCurrency(preview.perVisitTotal)} / visit`}
-              badge={preview.discountPercent > 0 ? `Save ${preview.discountPercent * 100}%` : undefined}
+              description={FREQUENCY_DESCRIPTIONS[freq]}
+              badge={discountPercent > 0 ? `Save ${discountPercent * 100}%` : undefined}
             />
           );
         })}

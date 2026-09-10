@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { MapPin, Loader2 } from "@/components/ui/icons";
 import { addressProvider } from "./index";
+import { isGoogleMapsConfigured } from "@/lib/googleMapsLoader";
 import type { AddressSuggestion } from "./AddressProvider";
 import type { AddressDetails } from "@/types/booking";
 
@@ -58,7 +59,14 @@ export function AddressAutocomplete({
     const currentRequestId = ++requestIdRef.current;
 
     debounceRef.current = setTimeout(async () => {
-      const results = await addressProvider.getSuggestions(value);
+      // A live provider (e.g. Google Places) can fail or hang on a slow or
+      // blocked network — never leave the spinner stuck in that case.
+      let results: AddressSuggestion[] = [];
+      try {
+        results = await addressProvider.getSuggestions(value);
+      } catch {
+        results = [];
+      }
       if (requestIdRef.current === currentRequestId) {
         setSuggestions(results);
         setIsLoading(false);
@@ -126,7 +134,9 @@ export function AddressAutocomplete({
       </AnimatePresence>
 
       <p className="mt-2 text-xs text-slate-400">
-        Demo address lookup — no external maps API is used.
+        {isGoogleMapsConfigured()
+          ? "Powered by Google Places — live address suggestions."
+          : "Demo address lookup — no external maps API is used."}
       </p>
     </div>
   );

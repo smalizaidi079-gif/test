@@ -15,8 +15,8 @@ export const STEP_COUNT = 7;
 export const STEP_LABELS = [
   "Service",
   "Address",
-  "Details",
   "Frequency",
+  "Details",
   "Quote",
   "Your info",
   "Done",
@@ -146,9 +146,9 @@ export function useQuoteWizard() {
       case 2:
         return state.address !== null;
       case 3:
-        return state.propertyDetails.propertySize !== null && state.propertyDetails.condition !== null;
-      case 4:
         return state.frequency !== null;
+      case 4:
+        return state.propertyDetails.propertySize !== null && state.propertyDetails.condition !== null;
       case 5:
         return true;
       case 6:
