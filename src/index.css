@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#iq-widget-scope {
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+#iq-widget-scope *,
+#iq-widget-scope *::before,
+#iq-widget-scope *::after {
+  box-sizing: border-box;
+}
+
+#iq-widget-scope input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
