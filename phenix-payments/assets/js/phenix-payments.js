@@ -16,31 +16,47 @@
 
 	var sdkPromise = null;
 
-	function loadSdk() {
-		if ( sdkPromise ) {
-			return sdkPromise;
-		}
-		sdkPromise = new Promise( function ( resolve, reject ) {
-			if ( window.paypal && window.paypal.Buttons ) {
-				resolve( window.paypal );
-				return;
-			}
+	function injectSdk( url ) {
+		return new Promise( function ( resolve, reject ) {
 			var s = document.createElement( 'script' );
-			s.src = cfg.sdkUrl;
+			s.src = url;
 			s.async = true;
-			s.setAttribute( 'data-namespace', 'paypal' );
 			s.onload = function () {
+				// PayPal answers an invalid request with a script that throws,
+				// so "loaded" is not enough: check the SDK is really there.
 				if ( window.paypal && window.paypal.Buttons ) {
 					resolve( window.paypal );
 				} else {
+					s.remove();
 					reject( new Error( 'sdk' ) );
 				}
 			};
 			s.onerror = function () {
-				sdkPromise = null;
+				s.remove();
 				reject( new Error( 'sdk' ) );
 			};
 			document.head.appendChild( s );
+		} );
+	}
+
+	function loadSdk() {
+		if ( sdkPromise ) {
+			return sdkPromise;
+		}
+		if ( window.paypal && window.paypal.Buttons ) {
+			sdkPromise = Promise.resolve( window.paypal );
+			return sdkPromise;
+		}
+		sdkPromise = injectSdk( cfg.sdkUrl ).catch( function ( err ) {
+			// Retry with PayPal buttons only (e.g. card fields not enabled
+			// for this account, or an optional funding option rejected).
+			if ( cfg.sdkUrlBasic && cfg.sdkUrlBasic !== cfg.sdkUrl ) {
+				return injectSdk( cfg.sdkUrlBasic );
+			}
+			throw err;
+		} ).catch( function ( err ) {
+			sdkPromise = null; // Allow another attempt later.
+			throw err;
 		} );
 		return sdkPromise;
 	}
@@ -411,7 +427,7 @@
 			},
 			function () {
 				loading.hidden = true;
-				self.showAlert( cfg.i18n.sdkError );
+				self.showAlert( cfg.isAdmin ? cfg.i18n.sdkError + ' ' + cfg.i18n.sdkErrorAdmin : cfg.i18n.sdkError );
 			}
 		);
 	};

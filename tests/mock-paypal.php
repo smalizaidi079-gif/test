@@ -74,3 +74,14 @@ function mockpp_set_capture_status($cid, $status) { $s = mockpp_state(); $s['cap
 add_action('rest_api_init', function () {
 	register_rest_route('mockpp/v1', '/approve/(?P<id>[A-Z0-9]+)', array('methods'=>'POST','permission_callback'=>'__return_true','callback'=>function($r){ mockpp_approve($r['id']); return array('ok'=>true); }));
 });
+
+// TEST ONLY: server-side fetch of the JS SDK URL.
+add_filter('pre_http_request', function ($pre, $args, $url) {
+	if (strpos($url, 'https://www.paypal.com/sdk/js') !== 0) return $pre;
+	parse_str(parse_url($url, PHP_URL_QUERY), $q);
+	if (($q['client-id'] ?? '') !== 'test-client') {
+		$body = "/* error */ throw new Error(\"SDK Validation error: 'Invalid query value for client-id: " . ($q['client-id'] ?? '') . "'\");";
+		return array('headers'=>array(),'body'=>$body,'response'=>array('code'=>400,'message'=>''),'cookies'=>array(),'filename'=>null);
+	}
+	return array('headers'=>array(),'body'=>'/* paypal sdk */','response'=>array('code'=>200,'message'=>''),'cookies'=>array(),'filename'=>null);
+}, 9, 3);

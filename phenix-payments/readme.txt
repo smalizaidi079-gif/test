@@ -4,7 +4,7 @@ Tags: paypal, payments, invoices, credit card, checkout
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 
 Secure invoice and project payments for The Phenix LLC using PayPal Checkout: PayPal, debit and credit cards (guest checkout), and optional embedded card fields.
@@ -27,6 +27,12 @@ Requires a PayPal **Business** account. See the plugin's Setup guide tab.
 3. Add `[phenix_payments]` to a page. In Elementor, use the Shortcode widget.
 
 == Changelog ==
+
+= 1.0.2 =
+* Fix: if PayPal rejects the full checkout script request (for example, card fields are not enabled for the account), the form retries with PayPal buttons only.
+* New: "Test connection" also checks the PayPal checkout script and shows PayPal's exact error, such as an invalid Client ID for the selected mode.
+* New: administrators see a diagnostic hint on the form when the checkout cannot load.
+* SDK URL keeps comma-separated lists unencoded.
 
 = 1.0.1 =
 * Fix: Settings page was not accessible because the submenu was registered before its parent.

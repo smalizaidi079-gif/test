@@ -77,6 +77,16 @@ window.paypal = {
   await p2.waitForSelector('.phx-pay__alert--error');
   ok('SDK load failure shows helpful error', (await p2.locator('.phx-pay__alert').innerText()).includes('could not be loaded'));
   await p2.screenshot({ path: `${OUT}/sdk-error.png`, fullPage: true });
+  // Full SDK URL rejected (e.g. card fields not enabled) -> falls back to buttons-only URL.
+  const p3 = await ctx.newPage();
+  const seen = [];
+  await p3.route('https://www.paypal.com/sdk/js**', r => { seen.push(r.request().url());
+    return r.request().url().includes('card-fields') ? r.fulfill({ status: 400, contentType: 'application/javascript', body: 'throw new Error("SDK Validation error")' }) : r.fulfill({ contentType: 'application/javascript', body: STUB }); });
+  await p3.goto('http://localhost:8899/pay/');
+  await p3.fill('input[name=name]', 'A'); await p3.fill('input[name=email]', 'a@example.com'); await p3.fill('input[name=amount]', '10');
+  await p3.click('button[type=submit]');
+  await p3.waitForSelector('#stub-paypal', { timeout: 10000 }).catch(() => {});
+  ok('SDK fallback to buttons-only when full URL rejected', (await p3.locator('#stub-paypal').count()) === 1 && seen.length === 2 && !seen[1].includes('card-fields'));
   await browser.close();
   console.log(results.join('\n'));
 })();

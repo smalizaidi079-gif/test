@@ -170,6 +170,14 @@ class Phenix_Pay_Admin_Settings_Page {
 			}
 		}
 
+		// The browser loads PayPal's checkout script with the Client ID;
+		// check that PayPal accepts it and surface PayPal's exact error.
+		$sdk           = Phenix_Pay_Shortcode::check_sdk();
+		$status['sdk'] = true === $sdk;
+		if ( true !== $sdk ) {
+			$status['message'] = trim( $status['message'] . ' ' . __( 'Checkout script:', 'phenix-payments' ) . ' ' . $sdk );
+		}
+
 		update_option( self::STATUS_OPTION, $status, false );
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&phx_tested=1' ) );
 		exit;
@@ -253,6 +261,8 @@ class Phenix_Pay_Admin_Settings_Page {
 
 		if ( ! $has_creds ) {
 			$state = array( 'bad', __( 'Not configured', 'phenix-payments' ) );
+		} elseif ( $tested && isset( $status['sdk'] ) && ! $status['sdk'] ) {
+			$state = array( 'bad', __( 'Checkout script rejected', 'phenix-payments' ) );
 		} elseif ( $tested && $status['auth'] && $status['webhook'] ) {
 			$state = array( 'good', __( 'Connected', 'phenix-payments' ) );
 		} elseif ( $tested && ! $status['auth'] ) {

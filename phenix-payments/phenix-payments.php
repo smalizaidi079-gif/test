@@ -3,7 +3,7 @@
  * Plugin Name:       Phenix Payments for PayPal
  * Plugin URI:        https://thephenixllc.com/
  * Description:       Secure invoice and project payments for The Phenix LLC using PayPal Checkout (PayPal, Pay Later, debit and credit cards). Card data is handled entirely by PayPal; every payment is verified server-side.
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            The Phenix LLC
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PHENIX_PAY_VERSION', '1.0.1' );
+define( 'PHENIX_PAY_VERSION', '1.0.2' );
 define( 'PHENIX_PAY_DB_VERSION', '1' );
 define( 'PHENIX_PAY_FILE', __FILE__ );
 define( 'PHENIX_PAY_DIR', plugin_dir_path( __FILE__ ) );

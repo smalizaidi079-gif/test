@@ -123,6 +123,73 @@ class Phenix_Pay_Shortcode {
 		return ob_get_clean();
 	}
 
+	/**
+	 * Build the official PayPal JavaScript SDK URL.
+	 *
+	 * @param bool $basic Buttons only, with no optional funding options.
+	 */
+	public static function sdk_url( $basic = false ) {
+		$args = array(
+			'client-id'  => Phenix_Pay_Settings::credential( 'client_id' ),
+			'currency'   => Phenix_Pay_Settings::currency(),
+			'intent'     => 'capture',
+			'components' => 'buttons',
+		);
+
+		if ( ! $basic ) {
+			$disable = array();
+			if ( ! Phenix_Pay_Settings::get( 'enable_card_button' ) ) {
+				$disable[] = 'card';
+			}
+			if ( Phenix_Pay_Settings::get( 'enable_paylater' ) ) {
+				$args['enable-funding'] = 'paylater';
+			} else {
+				$disable[] = 'paylater';
+			}
+			if ( $disable ) {
+				$args['disable-funding'] = implode( ',', $disable );
+			}
+			if ( Phenix_Pay_Settings::get( 'enable_card_fields' ) ) {
+				$args['components'] = 'buttons,card-fields';
+			}
+		}
+
+		$query = array();
+		foreach ( $args as $key => $value ) {
+			// Keep commas literal; PayPal expects comma-separated lists.
+			$query[] = $key . '=' . str_replace( '%2C', ',', rawurlencode( (string) $value ) );
+		}
+		return 'https://www.paypal.com/sdk/js?' . implode( '&', $query );
+	}
+
+	/**
+	 * Fetch the SDK URL from the server to surface PayPal's exact error
+	 * (e.g. an invalid client-id). Used by "Test connection".
+	 *
+	 * @return true|string True when the SDK loads, otherwise an error message.
+	 */
+	public static function check_sdk() {
+		$response = wp_remote_get( self::sdk_url( false ), array( 'timeout' => 20 ) );
+		if ( is_wp_error( $response ) ) {
+			return __( 'Your server could not reach www.paypal.com to check the checkout script:', 'phenix-payments' ) . ' ' . $response->get_error_message();
+		}
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$body = (string) wp_remote_retrieve_body( $response );
+		if ( 200 === $code && false === strpos( $body, 'SDK Validation error' ) ) {
+			return true;
+		}
+		$detail = '';
+		if ( preg_match( '/SDK Validation error:?\s*([^"\r\n]{0,300})/', $body, $m ) ) {
+			$detail = trim( $m[1] );
+		}
+		return sprintf(
+			/* translators: 1: HTTP status, 2: PayPal message */
+			__( 'PayPal rejected the checkout script request (HTTP %1$d). %2$s Check that the Client ID belongs to the selected mode (Sandbox vs Live) and that it is the Client ID, not the Secret.', 'phenix-payments' ),
+			$code,
+			$detail ? '"' . $detail . '".' : ''
+		);
+	}
+
 	private function enqueue( $currency, $env ) {
 		// Block themes and some page builders render shortcodes before
 		// wp_enqueue_scripts fires, so make sure the handles exist.
@@ -144,36 +211,6 @@ class Phenix_Pay_Shortcode {
 		}
 		$localized = true;
 
-		$disable = array();
-		$enable  = array();
-		if ( ! Phenix_Pay_Settings::get( 'enable_card_button' ) ) {
-			$disable[] = 'card';
-		}
-		if ( Phenix_Pay_Settings::get( 'enable_paylater' ) ) {
-			$enable[] = 'paylater';
-		} else {
-			$disable[] = 'paylater';
-		}
-		$disable[] = 'venmo';
-
-		$components = array( 'buttons' );
-		if ( Phenix_Pay_Settings::get( 'enable_card_fields' ) ) {
-			$components[] = 'card-fields';
-		}
-
-		$sdk_args = array(
-			'client-id'  => Phenix_Pay_Settings::credential( 'client_id' ),
-			'currency'   => $currency,
-			'intent'     => 'capture',
-			'components' => implode( ',', $components ),
-		);
-		if ( $disable ) {
-			$sdk_args['disable-funding'] = implode( ',', $disable );
-		}
-		if ( $enable ) {
-			$sdk_args['enable-funding'] = implode( ',', $enable );
-		}
-
 		wp_localize_script(
 			'phenix-payments',
 			'PhenixPayConfig',
@@ -181,7 +218,11 @@ class Phenix_Pay_Shortcode {
 				'restUrl'   => esc_url_raw( rest_url( Phenix_Pay_REST_Controller::NS . '/' ) ),
 				'nonce'     => wp_create_nonce( 'wp_rest' ),
 				// Official PayPal JavaScript SDK, loaded from PayPal's domain.
-				'sdkUrl'    => add_query_arg( array_map( 'rawurlencode', $sdk_args ), 'https://www.paypal.com/sdk/js' ),
+				'sdkUrl'      => self::sdk_url( false ),
+				// Fallback: PayPal buttons only (used if the full URL is rejected,
+				// e.g. card fields requested but not enabled for the account).
+				'sdkUrlBasic' => self::sdk_url( true ),
+				'isAdmin'     => current_user_can( Phenix_Pay_Plugin::capability() ),
 				'currency'  => $currency,
 				'locale'    => str_replace( '_', '-', get_locale() ),
 				'i18n'      => array(
@@ -192,6 +233,7 @@ class Phenix_Pay_Shortcode {
 					'amountRange'   => __( 'Please enter an amount between %1$s and %2$s.', 'phenix-payments' ),
 					'fixErrors'     => __( 'Please correct the highlighted fields.', 'phenix-payments' ),
 					'sdkError'      => __( 'The secure PayPal checkout could not be loaded. Please check your connection, disable ad blockers for this page, or try again later.', 'phenix-payments' ),
+					'sdkErrorAdmin' => __( 'Admin note (only you see this): PayPal refused the checkout script. Go to Phenix Payments → Settings and click "Test connection" for the exact reason. Usually the Client ID does not match the selected mode (Sandbox/Live), or the Secret was pasted into the Client ID field.', 'phenix-payments' ),
 					'generic'       => __( 'Something went wrong and your payment was not completed. You have not been charged. Please try again.', 'phenix-payments' ),
 					'cancelled'     => __( 'Payment cancelled. You have not been charged. You can try again whenever you are ready.', 'phenix-payments' ),
 					'processing'    => __( 'Processing your payment securely…', 'phenix-payments' ),
