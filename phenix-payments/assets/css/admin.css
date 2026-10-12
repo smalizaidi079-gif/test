@@ -1,0 +1,26 @@
+.phx-admin .phx-status { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 16px 20px; margin: 16px 0; max-width: 980px; }
+.phx-admin .phx-status__row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
+.phx-admin .phx-status__msg { margin: 6px 0 10px; }
+.phx-admin .phx-status__webhook code { user-select: all; word-break: break-all; }
+.phx-admin .phx-inline { display: inline-block; margin: 4px 0; }
+.phx-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.6; }
+.phx-pill--sm { padding: 0 6px; font-size: 11px; }
+.phx-pill--good { background: #e6f4ea; color: #137333; }
+.phx-pill--warn { background: #fef7e0; color: #8a5300; }
+.phx-pill--bad { background: #fce8e6; color: #a50e0e; }
+.phx-pill--sandbox { background: #fff4e5; color: #8a4b00; }
+.phx-pill--live { background: #e8f0fe; color: #174ea6; }
+.phx-status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; background: #f0f0f1; color: #3c434a; }
+.phx-status-badge--completed { background: #e6f4ea; color: #137333; }
+.phx-status-badge--pending, .phx-status-badge--capturing { background: #fef7e0; color: #8a5300; }
+.phx-status-badge--declined, .phx-status-badge--failed, .phx-status-badge--reversed { background: #fce8e6; color: #a50e0e; }
+.phx-status-badge--refunded, .phx-status-badge--partially_refunded { background: #f3e8fd; color: #6b21a8; }
+.phx-admin .phx-filters label { margin: 0 4px 0 6px; }
+.phx-admin .phx-detail { max-width: 900px; }
+.phx-admin .phx-detail th { width: 220px; }
+.phx-admin .phx-guide { max-width: 860px; }
+.phx-admin .phx-code { background: #1d2327; color: #f0f0f1; padding: 12px 16px; border-radius: 4px; overflow: auto; }
+.phx-admin .phx-log code { white-space: pre-wrap; word-break: break-all; font-size: 11px; }
+.phx-level { font-weight: 600; text-transform: uppercase; font-size: 11px; }
+.phx-level--error { color: #a50e0e; }
+.phx-level--warning { color: #8a5300; }
